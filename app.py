@@ -81,7 +81,7 @@ with tab1:
             "is_zero_balance":   is_zero_balance,
         }])
 
-        input_df = input_df.reindex(columns=FEATURE_ORDER, fill_value=0)
+        input_df = input_df.reindex(columns=feature_order, fill_value=0)
 
         # ── Predict ────────────────────────────────────────────────────────
         probability = model.predict_proba(input_df)[0][1]
