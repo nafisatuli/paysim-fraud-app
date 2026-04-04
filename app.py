@@ -53,7 +53,7 @@ with tab1:
     if st.button("Predict Fraud Risk"):
 
         # ── Engineered features (same as training) ─────────────────────────
-        amount_to_balance = amount / (oldbalanceOrg + 1)
+        amount_to_balance = min(amount / (oldbalanceOrg + 1), 1.0)
         is_zero_balance   = 1 if oldbalanceOrg == 0 else 0
 
         # ── One-hot encoding (CASH_IN dropped as reference) ────────────────
