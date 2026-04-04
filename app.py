@@ -4,35 +4,51 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-model = joblib.load("paysim_fraud_model.pkl")
+# ─────────────────────────────────────────────────────────────
+# Load model + threshold
+# ─────────────────────────────────────────────────────────────
+model     = joblib.load("paysim_fraud_model.pkl")
 threshold = joblib.load("threshold.pkl")
 
+# EXACT feature order from X.columns in notebook:
+# ['step', 'amount', 'oldbalanceOrg', 'oldbalanceDest',
+#  'type_CASH_OUT', 'type_DEBIT', 'type_PAYMENT', 'type_TRANSFER',
+#  'amount_to_balance', 'is_zero_balance']
+FEATURE_ORDER = [
+    "step", "amount",
+    "oldbalanceOrg", "oldbalanceDest",
+    "type_CASH_OUT", "type_DEBIT", "type_PAYMENT", "type_TRANSFER",
+    "amount_to_balance", "is_zero_balance"
+]
+
+# ─────────────────────────────────────────────────────────────
+# Page config
+# ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Fraud Detection System", layout="wide")
 st.title("💳 Mobile Money Fraud Detection System")
 
-# ── Tabs ────────────────────────────────────────────────────────────────────
 tab1, tab2 = st.tabs(["🔍 Predict Transaction", "📊 Model Leaderboard"])
 
-# ════════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════
 # TAB 1 — Prediction
-# ════════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════
 with tab1:
     st.write("Enter transaction details below:")
 
-    step           = st.number_input("Transaction Step (Time Index)", min_value=0, value=1)
+    step             = st.number_input("Transaction Step (Time Index)", min_value=0, value=1)
     transaction_type = st.selectbox(
         "Transaction Type",
         ["PAYMENT", "TRANSFER", "CASH_IN", "CASH_OUT", "DEBIT"]
     )
-    amount         = st.number_input("Transaction Amount",   min_value=0.0)
-    oldbalanceOrg  = st.number_input("Sender Old Balance",   min_value=0.0)
-    oldbalanceDest = st.number_input("Receiver Old Balance", min_value=0.0)
+    amount           = st.number_input("Transaction Amount",   min_value=0.0, value=0.0)
+    oldbalanceOrg    = st.number_input("Sender Old Balance",   min_value=0.0, value=0.0)
+    oldbalanceDest   = st.number_input("Receiver Old Balance", min_value=0.0, value=0.0)
 
     st.caption("ℹ️ Post-transaction balances are excluded to prevent data leakage in the model.")
 
     if st.button("Predict Fraud Risk"):
 
-        # ── Engineered features ────────────────────────────────────────────
+        # ── Engineered features (same as training) ─────────────────────────
         amount_to_balance = amount / (oldbalanceOrg + 1)
         is_zero_balance   = 1 if oldbalanceOrg == 0 else 0
 
@@ -42,24 +58,24 @@ with tab1:
         type_PAYMENT  = 1 if transaction_type == "PAYMENT"  else 0
         type_TRANSFER = 1 if transaction_type == "TRANSFER" else 0
 
-        # ── EXACT column order from X.columns ──────────────────────────────
-        # ['step', 'amount', 'oldbalanceOrg', 'oldbalanceDest',
-        #  'type_CASH_OUT', 'type_DEBIT', 'type_PAYMENT', 'type_TRANSFER',
-        #  'amount_to_balance', 'is_zero_balance']
-        input_data = np.array([[
-            step,
-            amount,
-            oldbalanceOrg,
-            oldbalanceDest,
-            type_CASH_OUT,
-            type_DEBIT,
-            type_PAYMENT,
-            type_TRANSFER,
-            amount_to_balance,
-            is_zero_balance
-        ]])
+        # ── Build DataFrame and reindex to exact column order ──────────────
+        input_df = pd.DataFrame([{
+            "step":              step,
+            "amount":            amount,
+            "oldbalanceOrg":     oldbalanceOrg,
+            "oldbalanceDest":    oldbalanceDest,
+            "type_CASH_OUT":     type_CASH_OUT,
+            "type_DEBIT":        type_DEBIT,
+            "type_PAYMENT":      type_PAYMENT,
+            "type_TRANSFER":     type_TRANSFER,
+            "amount_to_balance": amount_to_balance,
+            "is_zero_balance":   is_zero_balance,
+        }])
 
-        probability = model.predict_proba(input_data)[0][1]
+        input_df = input_df.reindex(columns=FEATURE_ORDER, fill_value=0)
+
+        # ── Predict ────────────────────────────────────────────────────────
+        probability = model.predict_proba(input_df)[0][1]
 
         st.subheader("Prediction Result")
         st.metric("Fraud Probability", f"{probability:.4f}")
@@ -93,9 +109,9 @@ with tab1:
         else:
             st.success("✅ Low Fraud Risk")
 
-# ════════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════
 # TAB 2 — Model Leaderboard
-# ════════════════════════════════════════════════════════════════════════════
+# ════════════════════════════════════════════════════════════
 with tab2:
     st.subheader("Model Performance Comparison")
     st.caption("Metrics evaluated on the 20% held-out test set (200,000 transactions).")
@@ -108,6 +124,7 @@ with tab2:
         "F1 Score":  [0.038523, 0.990215, 0.778650, 0.037324],
     })
 
+    # ── Styled table ──────────────────────────────────────────────────────
     st.markdown("#### 📋 Results Table")
 
     def highlight_best(s):
@@ -122,6 +139,7 @@ with tab2:
     )
     st.dataframe(styled, use_container_width=True)
 
+    # ── Grouped bar chart ─────────────────────────────────────────────────
     st.markdown("#### 📊 Visual Comparison")
 
     metrics = ["Accuracy", "Precision", "Recall", "F1 Score"]
@@ -149,6 +167,7 @@ with tab2:
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
+    # ── Key takeaway ──────────────────────────────────────────────────────
     st.info(
         "**Key Takeaway:** Random Forest achieves the highest overall performance "
         "(F1 = 0.990, Recall = 1.000), making it the most reliable model for this task. "
