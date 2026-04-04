@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 model = joblib.load("paysim_fraud_model.pkl")
-threshold = joblib.load("threshold.pkl")
+threshold = joblib.load("threshold_paysim.pkl")
 
 st.set_page_config(page_title="Fraud Detection System", layout="wide")
 st.title("💳 Mobile Money Fraud Detection System")
