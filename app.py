@@ -11,8 +11,8 @@ model     = joblib.load("paysim_fraud_model.pkl")
 threshold = joblib.load("threshold.pkl")
 
 # DEBUG — remove after fixing
-st.write("Model features:", model.feature_names_in_.tolist())
-st.write("Threshold:", threshold)
+# st.write("Model features:", model.feature_names_in_.tolist())
+# st.write("Threshold:", threshold)
 
 # EXACT feature order from X.columns in notebook:
 # ['step', 'amount', 'oldbalanceOrg', 'oldbalanceDest',
@@ -47,6 +47,8 @@ with tab1:
     amount           = st.number_input("Transaction Amount",   min_value=0.0, value=0.0)
     oldbalanceOrg    = st.number_input("Sender Old Balance",   min_value=0.0, value=0.0)
     oldbalanceDest   = st.number_input("Receiver Old Balance", min_value=0.0, value=0.0)
+    newbalanceOrig = st.number_input("Sender New Balance", min_value=0.0, value=0.0)
+    newbalanceDest = st.number_input("Receiver New Balance", min_value=0.0, value=0.0)
 
     st.caption("ℹ️ Post-transaction balances are excluded to prevent data leakage in the model.")
 
