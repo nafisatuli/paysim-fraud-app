@@ -8,8 +8,6 @@ import plotly.graph_objects as go
 # ─────────────────────────────────────────────────────────────
 model = joblib.load("paysim_fraud_model.pkl")
 threshold = joblib.load("threshold.pkl")
-feature_order = joblib.load("features.pkl")
-# OPTIONAL but recommended (if you saved it)
 try:
     feature_order = joblib.load("features.pkl")
 except:
@@ -74,8 +72,7 @@ with tab1:
         }])
 
         # ── Ensure correct feature order ──
-        input_df = input_df[feature_order]
-
+        input_df = input_df.reindex(columns=feature_order, fill_value=0)
         # ── Predict ──
         probability = model.predict_proba(input_df)[0][1]
 
