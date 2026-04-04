@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 # ─────────────────────────────────────────────────────────────
 model     = joblib.load("paysim_fraud_model.pkl")
 threshold = joblib.load("threshold.pkl")
+feature_order = joblib.load("features.pkl")
 
 # DEBUG — remove after fixing
 # st.write("Model features:", model.feature_names_in_.tolist())
@@ -18,12 +19,12 @@ threshold = joblib.load("threshold.pkl")
 # ['step', 'amount', 'oldbalanceOrg', 'oldbalanceDest',
 #  'type_CASH_OUT', 'type_DEBIT', 'type_PAYMENT', 'type_TRANSFER',
 #  'amount_to_balance', 'is_zero_balance']
-FEATURE_ORDER = [
-    "step", "amount",
-    "oldbalanceOrg", "oldbalanceDest",
-    "type_CASH_OUT", "type_DEBIT", "type_PAYMENT", "type_TRANSFER",
-    "amount_to_balance", "is_zero_balance"
-]
+# FEATURE_ORDER = [
+#     "step", "amount",
+#     "oldbalanceOrg", "oldbalanceDest",
+#     "type_CASH_OUT", "type_DEBIT", "type_PAYMENT", "type_TRANSFER",
+#     "amount_to_balance", "is_zero_balance"
+# ]
 
 # ─────────────────────────────────────────────────────────────
 # Page config
