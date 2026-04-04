@@ -94,13 +94,13 @@ with tab2:
     st.caption("Metrics evaluated on the 20% held-out test set (200,000 transactions).")
 
     # ── Hardcoded from notebook results ─────────────────────────────────────
-    results_df = pd.DataFrame({
-        "Model":     ["Logistic Regression", "Random Forest", "XGBoost", "Isolation Forest"],
-        "Accuracy":  [0.999280, 0.999995, 0.999785, 0.989180],
-        "Precision": [0.897810, 1.000000, 0.862069, 0.024390],
-        "Recall":    [0.917004, 0.996047, 0.988142, 0.193676],
-        "F1 Score":  [0.630769, 0.998020, 0.920810, 0.043324],
-    })
+results_df = pd.DataFrame({
+    "Model":     ["Logistic Regression", "Random Forest", "XGBoost", "Isolation Forest"],
+    "Accuracy":  [0.936855, 0.999975, 0.999295, 0.989425],
+    "Precision": [0.019640, 0.980620, 0.645833, 0.021091],
+    "Recall":    [1.000000, 1.000000, 0.980237, 0.162055],
+    "F1 Score":  [0.038523, 0.990215, 0.778650, 0.037324],
+})
 
     # ── Styled table ─────────────────────────────────────────────────────────
     st.markdown("#### 📋 Results Table")
