@@ -5,7 +5,8 @@ import pandas as pd
 import plotly.graph_objects as go
 
 model = joblib.load("paysim_fraud_model.pkl")
-threshold = joblib.load("threshold_paysim.pkl")
+threshold = joblib.load("threshold.pkl")
+
 st.set_page_config(page_title="Fraud Detection System", layout="wide")
 st.title("💳 Mobile Money Fraud Detection System")
 
@@ -23,28 +24,34 @@ with tab1:
         "Transaction Type",
         ["PAYMENT", "TRANSFER", "CASH_IN", "CASH_OUT", "DEBIT"]
     )
-    amount = st.number_input("Transaction Amount", min_value=0.0)
-    oldbalanceOrg  = st.number_input("Sender Old Balance",    min_value=0.0)
-    newbalanceOrig = st.number_input("Sender New Balance",    min_value=0.0)
-    oldbalanceDest = st.number_input("Receiver Old Balance",  min_value=0.0)
-    newbalanceDest = st.number_input("Receiver New Balance",  min_value=0.0)
+    amount        = st.number_input("Transaction Amount",    min_value=0.0)
+    oldbalanceOrg = st.number_input("Sender Old Balance",   min_value=0.0)
+    oldbalanceDest= st.number_input("Receiver Old Balance", min_value=0.0)
 
     if st.button("Predict Fraud Risk"):
-        # Engineered features (match training exactly)
+
+        # ── Engineered features (must match training exactly) ──────────────
         amount_to_balance = amount / (oldbalanceOrg + 1)
         is_zero_balance   = 1 if oldbalanceOrg == 0 else 0
 
-        # One-hot encoding (CASH_IN dropped as reference — drop_first=True)
+        # ── One-hot encoding (CASH_IN dropped as reference) ────────────────
         type_CASH_OUT = 1 if transaction_type == "CASH_OUT" else 0
         type_DEBIT    = 1 if transaction_type == "DEBIT"    else 0
         type_PAYMENT  = 1 if transaction_type == "PAYMENT"  else 0
         type_TRANSFER = 1 if transaction_type == "TRANSFER" else 0
 
+        # ── Feature order must match X.columns from notebook ───────────────
         input_data = np.array([[
-            step, amount,
-            oldbalanceOrg, oldbalanceDest,
-            amount_to_balance, is_zero_balance,
-            type_CASH_OUT, type_DEBIT, type_PAYMENT, type_TRANSFER
+            step,
+            amount,
+            oldbalanceOrg,
+            oldbalanceDest,
+            amount_to_balance,
+            is_zero_balance,
+            type_CASH_OUT,
+            type_DEBIT,
+            type_PAYMENT,
+            type_TRANSFER
         ]])
 
         probability = model.predict_proba(input_data)[0][1]
@@ -52,7 +59,7 @@ with tab1:
         st.subheader("Prediction Result")
         st.metric("Fraud Probability", f"{probability:.4f}")
 
-        # Gauge chart
+        # ── Gauge chart ────────────────────────────────────────────────────
         fig_gauge = go.Figure(go.Indicator(
             mode="gauge+number",
             value=round(probability * 100, 2),
@@ -67,9 +74,9 @@ with tab1:
                     {"range": [70, 100],"color": "#f8d7da"},
                 ],
                 "threshold": {
-                    "line":  {"color": "black", "width": 3},
+                    "line":      {"color": "black", "width": 3},
                     "thickness": 0.75,
-                    "value": threshold * 100
+                    "value":     threshold * 100
                 }
             }
         ))
@@ -88,7 +95,7 @@ with tab2:
     st.subheader("Model Performance Comparison")
     st.caption("Metrics evaluated on the 20% held-out test set (200,000 transactions).")
 
-    # ── Updated from latest notebook run ────────────────────────────────────
+    # ── Latest notebook results ──────────────────────────────────────────────
     results_df = pd.DataFrame({
         "Model":     ["Logistic Regression", "Random Forest", "XGBoost", "Isolation Forest"],
         "Accuracy":  [0.936855, 0.999975, 0.999295, 0.989425],
@@ -101,7 +108,6 @@ with tab2:
     st.markdown("#### 📋 Results Table")
 
     def highlight_best(s):
-        """Green for the best value in each metric column."""
         is_best = s == s.max()
         return ["background-color: #d4edda; font-weight: bold" if v else "" for v in is_best]
 
@@ -141,7 +147,7 @@ with tab2:
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # ── Key takeaway callout ─────────────────────────────────────────────────
+    # ── Key takeaway ─────────────────────────────────────────────────────────
     st.info(
         "**Key Takeaway:** Random Forest achieves the highest overall performance "
         "(F1 = 0.990, Recall = 1.000), making it the most reliable model for this task. "
