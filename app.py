@@ -10,6 +10,10 @@ import plotly.graph_objects as go
 model     = joblib.load("paysim_fraud_model.pkl")
 threshold = joblib.load("threshold.pkl")
 
+# DEBUG — remove after fixing
+st.write("Model features:", model.feature_names_in_.tolist())
+st.write("Threshold:", threshold)
+
 # EXACT feature order from X.columns in notebook:
 # ['step', 'amount', 'oldbalanceOrg', 'oldbalanceDest',
 #  'type_CASH_OUT', 'type_DEBIT', 'type_PAYMENT', 'type_TRANSFER',
