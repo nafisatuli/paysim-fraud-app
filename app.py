@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 # Load model + threshold + feature order
 # ─────────────────────────────────────────────────────────────
 model = joblib.load("paysim_fraud_model.pkl")
-threshold = joblib.load("threshold_paysim.pkl")
-
+threshold = joblib.load("threshold.pkl")
+feature_order = joblib.load("features.pkl")
 # OPTIONAL but recommended (if you saved it)
 try:
     feature_order = joblib.load("features.pkl")
