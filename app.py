@@ -144,7 +144,7 @@ with tab2:
         results_df.set_index("Model")
         .style
         .apply(highlight_best, axis=0)
-        .format("{:.4f}")
+        .format("{:.5f}")
     )
     st.dataframe(styled, use_container_width=True)
 
