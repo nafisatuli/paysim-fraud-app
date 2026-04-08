@@ -1,34 +1,15 @@
 import streamlit as st
 import joblib
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
 # ─────────────────────────────────────────────────────────────
-# Load model + threshold
+# Load model + threshold + feature order
 # ─────────────────────────────────────────────────────────────
-model     = joblib.load("paysim_fraud_model.pkl")
-threshold = joblib.load("threshold.pkl")
+model         = joblib.load("paysim_fraud_model.pkl")
+threshold     = joblib.load("threshold.pkl")
 feature_order = joblib.load("features.pkl")
 
-# DEBUG — remove after fixing
-# st.write("Model features:", model.feature_names_in_.tolist())
-# st.write("Threshold:", threshold)
-
-# EXACT feature order from X.columns in notebook:
-# ['step', 'amount', 'oldbalanceOrg', 'oldbalanceDest',
-#  'type_CASH_OUT', 'type_DEBIT', 'type_PAYMENT', 'type_TRANSFER',
-#  'amount_to_balance', 'is_zero_balance']
-# FEATURE_ORDER = [
-#     "step", "amount",
-#     "oldbalanceOrg", "oldbalanceDest",
-#     "type_CASH_OUT", "type_DEBIT", "type_PAYMENT", "type_TRANSFER",
-#     "amount_to_balance", "is_zero_balance"
-# ]
-
-# ─────────────────────────────────────────────────────────────
-# Page config
-# ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Fraud Detection System", layout="wide")
 st.title("💳 Mobile Money Fraud Detection System")
 
@@ -45,19 +26,22 @@ with tab1:
         "Transaction Type",
         ["PAYMENT", "TRANSFER", "CASH_IN", "CASH_OUT", "DEBIT"]
     )
-    amount           = st.number_input("Transaction Amount",   min_value=0.0, value=0.0)
-    oldbalanceOrg    = st.number_input("Sender Old Balance",   min_value=0.0, value=0.0)
-    oldbalanceDest   = st.number_input("Receiver Old Balance", min_value=0.0, value=0.0)
-    newbalanceOrig = st.number_input("Sender New Balance", min_value=0.0, value=0.0)
-    newbalanceDest = st.number_input("Receiver New Balance", min_value=0.0, value=0.0)
-
-    st.caption("ℹ️ Post-transaction balances are excluded to prevent data leakage in the model.")
+    amount         = st.number_input("Transaction Amount",    min_value=0.0, value=0.0)
+    oldbalanceOrg  = st.number_input("Sender Old Balance",    min_value=0.0, value=0.0)
+    newbalanceOrig = st.number_input("Sender New Balance",    min_value=0.0, value=0.0)
+    oldbalanceDest = st.number_input("Receiver Old Balance",  min_value=0.0, value=0.0)
+    newbalanceDest = st.number_input("Receiver New Balance",  min_value=0.0, value=0.0)
 
     if st.button("Predict Fraud Risk"):
 
-        # ── Engineered features (same as training) ─────────────────────────
+        # ── Engineered features (must match training exactly) ──────────────
         amount_to_balance = min(amount / (oldbalanceOrg + 1), 1.0)
         is_zero_balance   = 1 if oldbalanceOrg == 0 else 0
+
+        balanceDiffOrig  = oldbalanceOrg  - newbalanceOrig
+        balanceDiffDest  = newbalanceDest - oldbalanceDest
+        errorBalanceOrig = amount - balanceDiffOrig
+        errorBalanceDest = amount - balanceDiffDest
 
         # ── One-hot encoding (CASH_IN dropped as reference) ────────────────
         type_CASH_OUT = 1 if transaction_type == "CASH_OUT" else 0
@@ -65,31 +49,33 @@ with tab1:
         type_PAYMENT  = 1 if transaction_type == "PAYMENT"  else 0
         type_TRANSFER = 1 if transaction_type == "TRANSFER" else 0
 
-        # ── Build DataFrame and reindex to exact column order ──────────────
+        # ── Build DataFrame and reindex to exact feature order ─────────────
         input_df = pd.DataFrame([{
             "step":              step,
             "amount":            amount,
             "oldbalanceOrg":     oldbalanceOrg,
-            "newbalanceOrig": newbalanceOrig,   
+            "newbalanceOrig":    newbalanceOrig,
             "oldbalanceDest":    oldbalanceDest,
-            "newbalanceDest": newbalanceDest,  
+            "newbalanceDest":    newbalanceDest,
             "type_CASH_OUT":     type_CASH_OUT,
             "type_DEBIT":        type_DEBIT,
             "type_PAYMENT":      type_PAYMENT,
             "type_TRANSFER":     type_TRANSFER,
             "amount_to_balance": amount_to_balance,
             "is_zero_balance":   is_zero_balance,
+            "balanceDiffOrig":   balanceDiffOrig,
+            "balanceDiffDest":   balanceDiffDest,
+            "errorBalanceOrig":  errorBalanceOrig,
+            "errorBalanceDest":  errorBalanceDest,
         }])
 
         input_df = input_df.reindex(columns=feature_order, fill_value=0)
 
-        # ── Predict ────────────────────────────────────────────────────────
         probability = model.predict_proba(input_df)[0][1]
 
         st.subheader("Prediction Result")
         st.metric("Fraud Probability", f"{probability:.4f}")
 
-        # ── Gauge chart ────────────────────────────────────────────────────
         fig_gauge = go.Figure(go.Indicator(
             mode="gauge+number",
             value=round(probability * 100, 2),
@@ -133,7 +119,6 @@ with tab2:
         "F1 Score":  [0.051439, 0.996063, 0.642473, 0.017738],
     })
 
-    # ── Styled table ──────────────────────────────────────────────────────
     st.markdown("#### 📋 Results Table")
 
     def highlight_best(s):
@@ -148,7 +133,6 @@ with tab2:
     )
     st.dataframe(styled, use_container_width=True)
 
-    # ── Grouped bar chart ─────────────────────────────────────────────────
     st.markdown("#### 📊 Visual Comparison")
 
     metrics = ["Accuracy", "Precision", "Recall", "F1 Score"]
@@ -176,11 +160,10 @@ with tab2:
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # ── Key takeaway ──────────────────────────────────────────────────────
     st.info(
         "**Key Takeaway:** Random Forest achieves the highest overall performance "
-        "(F1 = 0.990, Recall = 1.000), making it the most reliable model for this task. "
-        "Logistic Regression achieves perfect recall but very low precision, flagging too many "
+        "(F1 = 0.996, Recall = 1.000), making it the most reliable model for this task. "
+        "Logistic Regression achieves high recall but very low precision, flagging too many "
         "legitimate transactions as fraud. "
         "Isolation Forest performs poorly in the supervised setting due to its unsupervised nature."
     )
